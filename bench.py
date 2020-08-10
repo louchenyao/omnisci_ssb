@@ -72,8 +72,12 @@ def bench(sf=1):
     queries = glob.glob("./queries/*.sql")
     queries.sort()
     for q in queries:
-        time, _ = run_sqlfile(q, f"ssb_sf{sf}")
-        print(f"{q} takes {time} ms")
+        min_ = 1000000000
+        for _ in range(3):
+            time, _ = run_sqlfile(q, f"ssb_sf{sf}")
+            if time < min_:
+                min_ = time
+        print(f"{q} takes {min_} ms")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
