@@ -2,6 +2,7 @@
 
 import argparse
 import glob
+import subprocess
 import os
 import pandas as pd
 
@@ -28,7 +29,17 @@ def run(sql, db=""):
     assert(os.system(f"echo \"{sql}\" | /opt/omnisci/bin/omnisql -u admin -p HyperInteractive {db}") == 0)
 
 def run_sqlfile(path, db=""):
-    assert(os.system(f"/opt/omnisci/bin/omnisql -u admin -p HyperInteractive {db} < {path}") == 0)
+    p = subprocess.run(f"/opt/omnisci/bin/omnisql -t -u admin -p HyperInteractive {db} < {path}",
+                       stdout=subprocess.PIPE,
+                       shell=True)
+    assert(p.returncode == 0)
+    # eg: Execution time: 18 ms, Total time: 20 ms
+    for l in p.stdout.decode().splitlines():
+        if l.startswith("Execution"):
+            assert("ms," in l)
+            l = l.split()
+            return int(l[2]), int(l[6])
+    return 0, 0
 
 def gen(sf=1):
     os.system(f"rm -rf data_sf{sf}")
@@ -61,8 +72,8 @@ def bench(sf=1):
     queries = glob.glob("./queries/*.sql")
     queries.sort()
     for q in queries:
-        print(q)
-        run_sqlfile(q, f"ssb_sf{sf}")
+        time, _ = run_sqlfile(q, f"ssb_sf{sf}")
+        print(f"{q} takes {time} ms")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
